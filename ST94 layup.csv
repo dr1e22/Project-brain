@@ -1,0 +1,19 @@
+Ply ID,Material,Thickness (mm),Angle (deg),Stress/Strain
+1,ST94 Glass Fiber Reinforced Plastic,0.2375,0,ON
+2,ST94 Glass Fiber Reinforced Plastic,0.2375,90,ON
+3,ST94 Glass Fiber Reinforced Plastic,0.2375,45,ON
+4,ST94 Glass Fiber Reinforced Plastic,0.2375,-45,ON
+5,ST94 Glass Fiber Reinforced Plastic,0.2375,0,ON
+6,ST94 Glass Fiber Reinforced Plastic,0.2375,90,ON
+7,ST94 Glass Fiber Reinforced Plastic,0.2375,45,ON
+8,ST94 Glass Fiber Reinforced Plastic,0.2375,-45,ON
+9,Carbon OPTIVEIL,0.02,0,ON
+10,ST94 Glass Fiber Reinforced Plastic,0.2375,-45,ON
+11,ST94 Glass Fiber Reinforced Plastic,0.2375,45,ON
+12,ST94 Glass Fiber Reinforced Plastic,0.2375,90,ON
+13,ST94 Glass Fiber Reinforced Plastic,0.2375,0,ON
+14,ST94 Glass Fiber Reinforced Plastic,0.2375,-45,ON
+15,ST94 Glass Fiber Reinforced Plastic,0.2375,45,ON
+16,ST94 Glass Fiber Reinforced Plastic,0.2375,90,ON
+17,ST94 Glass Fiber Reinforced Plastic,0.2375,0,ON
+

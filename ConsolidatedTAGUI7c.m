@@ -916,42 +916,146 @@ x = 1; y = 1; width = 1; height = 1;
 %% Temp surface plots
 
     function showSurfacePlot(~, ~)
+
         if isempty(croppedAnalysis)
             uialert(fig, 'Crop data first.', 'Error');
             return;
         end
+    
         frameIndex = round(frameField.Value);
+    
         if frameIndex < 1 || frameIndex > size(croppedAnalysis.data, 3)
-            uialert(fig, sprintf('Frame index must be between 1 and %d.', size(croppedAnalysis.data, 3)), 'Error');
+            uialert(fig, sprintf('Frame index must be between 1 and %d.', ...
+                size(croppedAnalysis.data, 3)), 'Error');
             return;
         end
-        pixelSize = getFieldValue(findobj(fig,'Tag','pixelSizeField'),0.6);
-        useMillimeters = getFieldValue(findobj(fig,'Tag','scaleUnitsCheckbox'),true);
+    
+        pixelSize = getFieldValue(findobj(fig,'Tag','pixelSizeField'), 0.6);
+        useMillimeters = getFieldValue(findobj(fig,'Tag','scaleUnitsCheckbox'), true);
+    
+        % Get frame
         frameToDisplay = croppedAnalysis.data(:,:,frameIndex);
+    
+        % Keep bottom-left origin convention
         frameToDisplay = flipud(frameToDisplay);
-        frameAdjusted = applyFilters(frameToDisplay, true);
-        figure('Name', ['Surface Plot Frame ' num2str(frameIndex)]);
-        [xSize, ySize] = size(frameAdjusted);
-        if useMillimeters
-            X = (1:ySize)*pixelSize;
-            Y = (1:xSize)*pixelSize;
-            xlabel('X-axis (mm)', 'FontName', 'Arial', 'FontSize', 20, 'FontWeight', 'bold');
-            ylabel('Y-axis (mm)', 'FontName', 'Arial', 'FontSize', 20, 'FontWeight', 'bold');
+    
+        % Apply selected filter only.
+        % Do NOT use imadjust here because it can clip/saturate high peaks.
+        frameFiltered = applyFilters(frameToDisplay, false);
+    
+        % Manual 0–1 normalisation to keep the old surface-plot appearance
+        % without flattening high-temperature peaks.
+        zMinRaw = min(frameFiltered(:));
+        zMaxRaw = max(frameFiltered(:));
+    
+        if zMaxRaw > zMinRaw
+            frameAdjusted = (frameFiltered - zMinRaw) ./ (zMaxRaw - zMinRaw);
         else
-            X = 1:ySize;
-            Y = 1:xSize;
-            xlabel('X-axis (Pixel)', 'FontName', 'Arial', 'FontSize', 20, 'FontWeight', 'bold');
-            ylabel('Y-axis (Pixel)', 'FontName', 'Arial', 'FontSize', 20, 'FontWeight', 'bold');
+            frameAdjusted = zeros(size(frameFiltered));
         end
-        [X, Y] = meshgrid(X, Y);
-        surf(X, Y, frameAdjusted);
-        title(['Thermal Surface Plot at Frame ' num2str(frameIndex)], 'FontName', 'Arial', 'FontSize', 22, 'FontWeight', 'bold');
-        zlabel('Temperature', 'FontName', 'Arial', 'FontSize', 20, 'FontWeight', 'bold');
-        colormap('jet');
-        colorbar;
-        set(gca, 'FontSize', 18);
-        set(gcf, 'Color', 'w');
-        set(gca, 'YDir', 'normal');
+    
+        [nRows, nCols] = size(frameAdjusted);
+    
+        if useMillimeters
+            xAxis = (0:nCols-1) * pixelSize;
+            yAxis = (0:nRows-1) * pixelSize;
+            xLabelText = 'X-axis (mm)';
+            yLabelText = 'Y-axis (mm)';
+        else
+            xAxis = 1:nCols;
+            yAxis = 1:nRows;
+            xLabelText = 'X-axis (Pixel)';
+            yLabelText = 'Y-axis (Pixel)';
+        end
+    
+        [X, Y] = meshgrid(xAxis, yAxis);
+    
+        % Create white figure explicitly to avoid MATLAB 2026a dark graphics defaults
+        hFig = figure( ...
+            'Name', ['Surface Plot Frame ' num2str(frameIndex)], ...
+            'Color', 'w', ...
+            'InvertHardcopy', 'off', ...
+            'Renderer', 'opengl');
+    
+        ax = axes(hFig);
+        hold(ax, 'on');
+    
+        hSurf = surf(ax, X, Y, frameAdjusted);
+    
+        % Recreate the older mesh-style surface
+        hSurf.FaceColor = 'interp';
+        hSurf.EdgeColor = [0 0 0];
+        hSurf.EdgeAlpha = 0.35;
+        hSurf.LineWidth = 0.25;
+    
+        colormap(ax, 'jet');
+        cb = colorbar(ax);
+        cb.Color = 'k';
+    
+        xlabel(ax, xLabelText, ...
+            'FontName', 'Arial', ...
+            'FontSize', 20, ...
+            'FontWeight', 'bold', ...
+            'Color', 'k');
+    
+        ylabel(ax, yLabelText, ...
+            'FontName', 'Arial', ...
+            'FontSize', 20, ...
+            'FontWeight', 'bold', ...
+            'Color', 'k');
+    
+        zlabel(ax, 'Temperature', ...
+            'FontName', 'Arial', ...
+            'FontSize', 20, ...
+            'FontWeight', 'bold', ...
+            'Color', 'k');
+    
+        title(ax, ['Thermal Surface Plot at Frame ' num2str(frameIndex)], ...
+            'FontName', 'Arial', ...
+            'FontSize', 22, ...
+            'FontWeight', 'bold', ...
+            'Color', 'k');
+    
+        % Force white axes/background and black text/axes
+        ax.Color = 'w';
+        ax.XColor = 'k';
+        ax.YColor = 'k';
+        ax.ZColor = 'k';
+        ax.GridColor = [0.75 0.75 0.75];
+        ax.MinorGridColor = [0.85 0.85 0.85];
+        ax.FontName = 'Arial';
+        ax.FontSize = 18;
+        ax.LineWidth = 1;
+    
+        % Keep bottom-left origin convention
+        ax.YDir = 'normal';
+    
+        grid(ax, 'on');
+        box(ax, 'on');
+        axis(ax, 'tight');
+    
+        % Match the older orientation more closely
+        view(ax, -35, 25);
+    
+        % Use the normalised range, but add a small z-margin so peaks are not
+        % visually pressed against the top of the axis.
+        zMin = min(frameAdjusted(:));
+        zMax = max(frameAdjusted(:));
+        zRange = zMax - zMin;
+    
+        if zRange > 0
+            zlim(ax, [zMin, zMax + 0.05*zRange]);
+            caxis(ax, [zMin, zMax]);
+        else
+            zlim(ax, [zMin - 0.1, zMax + 0.1]);
+            caxis(ax, [zMin - 0.1, zMax + 0.1]);
+        end
+    
+        set(hFig, 'Color', 'w');
+        set(ax, 'Color', 'w');
+    
+        hold(ax, 'off');
+    
     end
 
 %% MP4
